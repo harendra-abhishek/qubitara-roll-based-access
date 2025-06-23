@@ -68,6 +68,7 @@ export function QubitaraLoginForm() {
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [isPageLoaded, setIsPageLoaded] = useState(false);
+  const [loginError, setLoginError] = useState<string>('');
   const { login, isLoading } = useAuth();
 
   const {
@@ -119,13 +120,18 @@ export function QubitaraLoginForm() {
   }, [failedAttempts]);
 
   const onSubmit = async (data: LoginFormData) => {
-    if (isRateLimited) return;
+    if (isRateLimited) {
+      setLoginError('Too many failed attempts. Please wait 5 minutes before trying again.');
+      return;
+    }
+    
+    setLoginError('');
     
     try {
       const success = await login(data.email, data.password);
       
       if (success) {
-        // Simulate 2FA requirement for demo
+        // Simulate 2FA requirement for admin user
         if (data.email === 'sunil@gmail.com') {
           setShowTwoFactor(true);
           return;
@@ -133,24 +139,27 @@ export function QubitaraLoginForm() {
         setFailedAttempts(0);
       } else {
         setFailedAttempts(prev => prev + 1);
+        setLoginError('Invalid email or password. Please try again.');
       }
     } catch (error) {
       setFailedAttempts(prev => prev + 1);
+      setLoginError('Login failed. Please try again.');
     }
   };
 
   const handleTwoFactorSubmit = () => {
     if (twoFactorCode === '123456') {
       setShowTwoFactor(false);
-      // Complete login process
+      // Complete login process - the user is already logged in at this point
     } else {
-      // Handle invalid 2FA code
+      setLoginError('Invalid 2FA code. Please try 123456 for demo.');
     }
   };
 
   const fillDemoCredentials = (email: string, password: string) => {
     setValue('email', email);
     setValue('password', password);
+    setLoginError('');
   };
 
   const pageVariants = {
@@ -231,6 +240,24 @@ export function QubitaraLoginForm() {
                 <Shield className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-800 dark:text-red-200">
                   Too many failed attempts. Please wait 5 minutes before trying again.
+                </AlertDescription>
+              </Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Login Error Alert */}
+        <AnimatePresence>
+          {loginError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 dark:text-red-200">
+                  {loginError}
                 </AlertDescription>
               </Alert>
             </motion.div>
@@ -391,7 +418,7 @@ export function QubitaraLoginForm() {
                       <Shield className="h-12 w-12 text-blue-600 mx-auto" />
                       <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
                       <p className="text-sm text-slate-600">
-                        Enter the 6-digit code from your authenticator app
+                        Enter the 6-digit code: <strong>123456</strong> (demo code)
                       </p>
                     </div>
                     
@@ -435,7 +462,7 @@ export function QubitaraLoginForm() {
                   transition={{ delay: 0.6 }}
                 >
                   <p className="text-sm text-slate-600 text-center font-medium">
-                    Demo Credentials
+                    Demo Credentials (Click to auto-fill)
                   </p>
                   <div className="grid gap-2">
                     {[
@@ -468,6 +495,9 @@ export function QubitaraLoginForm() {
                         </Button>
                       </motion.div>
                     ))}
+                  </div>
+                  <div className="text-xs text-center text-slate-500 mt-2">
+                    Password for all accounts: <strong>12345</strong>
                   </div>
                 </motion.div>
               )}
